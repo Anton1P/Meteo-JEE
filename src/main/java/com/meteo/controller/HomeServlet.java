@@ -49,13 +49,27 @@ public class HomeServlet extends HttpServlet {
 
                     // On stocke en session pour ne pas redemander à chaque F5
                     session.setAttribute("guestWeather", guestWeather);
+
+                    // On nettoie l'indicateur d'échec s'il existait
+                    session.removeAttribute("geoFailed");
+
+                    // On redirige pour nettoyer l'URL
+                    response.sendRedirect("home");
+                    return;
+                } else {
+                    // Si l'API renvoie null (ex: service indisponible ou coords invalides)
+                    // On ne redirige PAS vers 'home' pour éviter la boucle infinie
+                    // On note l'échec en session pour ne plus demander
+                    session.setAttribute("geoFailed", true);
+                    session.setAttribute("flashError", "Impossible de récupérer la météo locale.");
                 }
             } catch (NumberFormatException e) {
                 // Ignorer si paramètres invalides
+                session.setAttribute("geoFailed", true);
             }
-            // On redirige pour nettoyer l'URL
-            response.sendRedirect("home");
-            return;
+
+            // Si on est ici, c'est que ça a échoué. On continue le flux normal pour afficher la page avec l'erreur.
+            // On ne redirige pas, on laisse le flux descendre pour afficher la JSP.
         }
 
         // --- 2. LOGIQUE PRINCIPALE ---
@@ -67,17 +81,14 @@ public class HomeServlet extends HttpServlet {
 
         if (isUserLoggedIn) {
             // L'utilisateur est connecté, on récupère ses favoris (avec préférences)
-            // Note: recupererVilles renvoie maintenant des objets MeteoVille partiels (Nom + Prefs)
             List<MeteoVille> favoris = meteoDAO.recupererVilles(utilisateurConnecte.getId());
 
             if (!favoris.isEmpty()) {
                 hasFavorites = true;
                 for (MeteoVille favori : favoris) {
-                    // On va chercher les données météo fraîches
                     MeteoVille villeComplete = meteoClient.recupererMeteo(favori.getNomVille());
 
                     if (villeComplete != null) {
-                        // IMPORTANT : On réinjecte les préférences de la BDD dans l'objet complet
                         villeComplete.setPreferences(favori.getPreferences());
                         villesAffichees.add(villeComplete);
                     }
@@ -91,13 +102,12 @@ public class HomeServlet extends HttpServlet {
 
             // A-t-on déjà la position en session ?
             MeteoVille guestWeather = (MeteoVille) session.getAttribute("guestWeather");
+            Boolean geoFailed = (Boolean) session.getAttribute("geoFailed");
 
             if (guestWeather != null) {
-                // Oui, on l'affiche
-                // En mode invité, on peut aussi avoir des préférences par défaut ou stockées en session si on voulait pousser plus loin
                 villesAffichees.add(guestWeather);
-            } else {
-                // Non, il faut demander au navigateur (JS)
+            } else if (geoFailed == null || !geoFailed) {
+                // Seulement si on n'a pas déjà échoué
                 request.setAttribute("askForGeolocation", true);
             }
         }
@@ -116,7 +126,6 @@ public class HomeServlet extends HttpServlet {
         // Certaines actions nécessitent d'être connecté
         if (utilisateurConnecte == null) {
             // Si un invité essaie de poster (ex: ajouter ville), on le redirige vers le login
-            // Ou on pourrait gérer un panier temporaire, mais restons simples pour l'instant.
             response.sendRedirect("login.jsp");
             return;
         }
@@ -125,6 +134,7 @@ public class HomeServlet extends HttpServlet {
             if (action.equals("supprimer")) {
                 String nomVilleASupprimer = request.getParameter("nomVille");
                 meteoDAO.supprimerFavori(utilisateurConnecte.getId(), nomVilleASupprimer);
+                session.setAttribute("flashSuccess", "Ville supprimée.");
 
             } else if (action.equals("updatePreferences")) {
                 String nomVille = request.getParameter("nomVille");
@@ -138,9 +148,10 @@ public class HomeServlet extends HttpServlet {
                 }
 
                 meteoDAO.updatePreferences(utilisateurConnecte.getId(), nomVille, prefsString);
+                session.setAttribute("flashSuccess", "Préférences sauvegardées.");
             }
         } else {
-            // Ajout classique (action est null ou vide, via le formulaire d'ajout)
+            // Ajout classique
             String nouvelleVille = request.getParameter("nomVille");
             
             if (nouvelleVille != null && !nouvelleVille.isEmpty()) {
@@ -152,7 +163,12 @@ public class HomeServlet extends HttpServlet {
                     
                     if (idVille != -1) {
                         meteoDAO.ajouterFavori(utilisateurConnecte.getId(), idVille);
+                        session.setAttribute("flashSuccess", "Ville ajoutée avec succès !");
+                    } else {
+                        session.setAttribute("flashError", "Erreur technique lors de l'ajout.");
                     }
+                } else {
+                    session.setAttribute("flashError", "Ville introuvable : " + nouvelleVille);
                 }
             }
         }

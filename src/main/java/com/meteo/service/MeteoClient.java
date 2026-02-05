@@ -5,6 +5,8 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -17,8 +19,14 @@ public class MeteoClient {
     private static final String API_URL_COORD = "http://api.openweathermap.org/data/2.5/weather?lat=%s&lon=%s&appid=%s&units=metric&lang=fr";
 
     public MeteoVille recupererMeteo(String ville) {
-        String adresseComplete = String.format(API_URL_VILLE, ville, API_KEY);
-        return appelerApi(adresseComplete, ville);
+        try {
+            String villeEncodee = URLEncoder.encode(ville, StandardCharsets.UTF_8.toString());
+            String adresseComplete = String.format(API_URL_VILLE, villeEncodee, API_KEY);
+            return appelerApi(adresseComplete, ville);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     public MeteoVille recupererMeteoByCoordinates(double lat, double lon) {
