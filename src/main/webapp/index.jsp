@@ -54,11 +54,51 @@
         /* Données supplémentaires */
         .extras { border-top: 1px solid #eee; margin-top: 15px; padding-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; font-size: 0.9em; color: #555; }
         .extra-item { display: flex; align-items: center; gap: 5px; }
+
+        /* Toast Notifications */
+        .toast {
+            visibility: hidden;
+            min-width: 250px;
+            margin-left: -125px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 4px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1;
+            left: 50%;
+            bottom: 30px;
+            font-size: 17px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            opacity: 0;
+            transition: opacity 0.5s, bottom 0.5s;
+        }
+
+        .toast.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 50px;
+        }
+
+        .toast.success { background-color: #28a745; }
+        .toast.error { background-color: #dc3545; }
     </style>
 </head>
 <body>
 
 <div class="container">
+
+    <%-- TOAST NOTIFICATIONS (Flash Attributes) --%>
+    <c:if test="${not empty sessionScope.flashSuccess}">
+        <div id="toast" class="toast success"><c:out value="${sessionScope.flashSuccess}" /></div>
+        <c:remove var="flashSuccess" scope="session" />
+    </c:if>
+
+    <c:if test="${not empty sessionScope.flashError}">
+        <div id="toast" class="toast error"><c:out value="${sessionScope.flashError}" /></div>
+        <c:remove var="flashError" scope="session" />
+    </c:if>
 
     <!-- HEADER -->
     <div class="header">
@@ -162,6 +202,16 @@
 
 <!-- SCRIPT JS -->
 <script>
+    // TOAST ANIMATION
+    var toast = document.getElementById("toast");
+    if (toast) {
+        toast.className += " show";
+        setTimeout(function(){
+            toast.className = toast.className.replace(" show", "");
+            // Petit hack pour le retirer du flux après l'anim si besoin, mais visibility:hidden suffit
+        }, 3000);
+    }
+
     // Fonction pour afficher/cacher les réglages
     function toggleSettings(index) {
         var panel = document.getElementById('settings-' + index);
