@@ -35,6 +35,7 @@
         </form>
         
         <a href="register.jsp" class="link">Pas de compte ? S'inscrire</a>
+        <a href="home" class="link" style="color: #6c757d; margin-top: 15px;">← Retour à l'accueil / Mode Invité</a>
     </div>
 
 </body>
