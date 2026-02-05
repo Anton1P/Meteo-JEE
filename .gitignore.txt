@@ -1,0 +1,13 @@
+# Fichiers compilés
+*.class
+build/
+dist/
+
+# Fichiers systèmes
+.DS_Store
+Thumbs.db
+
+# Si tu utilises Eclipse (optionnel, tu peux les laisser si tu veux partager la config eclipse)
+# .settings/
+# .classpath
+# .project
