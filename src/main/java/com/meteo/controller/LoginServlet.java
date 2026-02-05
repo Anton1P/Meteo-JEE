@@ -31,27 +31,22 @@ public class LoginServlet extends HttpServlet {
         // 1. On interroge la base de données
         Utilisateur user = utilisateurDAO.seConnecter(email, password);
         
+        HttpSession session = request.getSession();
+
         if (user != null) {
             // --- SUCCÈS ---
-            
-            // 2. CRÉATION DE LA SESSION (Le moment le plus important)
-            // On récupère la session de l'utilisateur (ou on en crée une nouvelle)
-            HttpSession session = request.getSession();
-            
-            // On stocke l'objet "user" dedans. C'est son badge d'identité.
             session.setAttribute("utilisateur", user);
+            session.setAttribute("flashSuccess", "Heureux de vous revoir !");
             
             // 3. Redirection vers la page d'accueil principale
             response.sendRedirect("home");
             
         } else {
             // --- ÉCHEC ---
-            
-            // On prépare un message d'erreur
-            request.setAttribute("erreur", "Email ou mot de passe incorrect");
-            
-            // On renvoie vers le formulaire de login
-            this.getServletContext().getRequestDispatcher("/login.jsp").forward(request, response);
+            // Utilisation des flash attributes via la session au lieu du request forward
+            // pour être cohérent avec l'UX des autres pages (Toast)
+            session.setAttribute("flashError", "Email ou mot de passe incorrect.");
+            response.sendRedirect("login.jsp");
         }
     }
 }

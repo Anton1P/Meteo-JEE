@@ -6,6 +6,7 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import com.meteo.dao.UtilisateurDAO;
 import com.meteo.model.Utilisateur;
@@ -31,11 +32,23 @@ public class RegisterServlet extends HttpServlet {
         // 2. Créer l'objet Utilisateur
         Utilisateur nouvelUtilisateur = new Utilisateur(email, password);
         
-        // 3. Sauvegarder en base via le DAO
+        // 3. Sauvegarder en base via le DAO (mot de passe haché par le DAO)
         utilisateurDAO.inscrire(nouvelUtilisateur);
         
-        // 4. Rediriger vers la page de connexion (qu'on fera juste après)
-        // Pour l'instant, on redirige vers l'accueil pour tester
-        response.sendRedirect("register.jsp"); 
+        // 4. AUTO-LOGIN : On récupère l'utilisateur complet (avec ID)
+        Utilisateur utilisateurConnecte = utilisateurDAO.seConnecter(email, password);
+
+        if (utilisateurConnecte != null) {
+            // Création de la session
+            HttpSession session = request.getSession();
+            session.setAttribute("utilisateur", utilisateurConnecte);
+            session.setAttribute("flashSuccess", "Bienvenue ! Compte créé avec succès.");
+
+            // Redirection vers l'accueil
+            response.sendRedirect("home");
+        } else {
+            // Cas improbable mais on gère : redirection vers login
+            response.sendRedirect("login.jsp");
+        }
     }
 }
