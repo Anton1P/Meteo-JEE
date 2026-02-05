@@ -37,15 +37,16 @@ public class MeteoDAO {
         }
     }
 
-    // --- 2. RECUPERER LES VILLES D'UN UTILISATEUR (Modification majeure) ---
-    public List<String> recupererVilles(int idUtilisateur) {
-        List<String> listeVilles = new ArrayList<>();
+    // --- 2. RECUPERER LES VILLES D'UN UTILISATEUR ---
+    public List<MeteoVille> recupererVilles(int idUtilisateur) {
+        List<MeteoVille> listeVilles = new ArrayList<>();
         
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
             Connection connexion = DriverManager.getConnection(URL, USER, PWD);
             
-            String sql = "SELECT v.nom_ville " +
+            // On récupère aussi les préférences
+            String sql = "SELECT v.nom_ville, f.preferences " +
                          "FROM villes v " +
                          "JOIN favoris f ON v.id = f.id_ville " +
                          "WHERE f.id_utilisateur = ?";
@@ -56,7 +57,10 @@ public class MeteoDAO {
             ResultSet resultat = statement.executeQuery();
             
             while (resultat.next()) {
-                listeVilles.add(resultat.getString("nom_ville"));
+                MeteoVille ville = new MeteoVille();
+                ville.setNomVille(resultat.getString("nom_ville"));
+                ville.setPreferences(resultat.getString("preferences"));
+                listeVilles.add(ville);
             }
             connexion.close();
         } catch (Exception e) {
@@ -127,5 +131,27 @@ public class MeteoDAO {
             e.printStackTrace();
         }
         return id;
+    }
+
+    // --- 6. METTRE A JOUR LES PREFERENCES ---
+    public void updatePreferences(int idUtilisateur, String nomVille, String preferences) {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            Connection connexion = DriverManager.getConnection(URL, USER, PWD);
+
+            String sql = "UPDATE favoris SET preferences = ? " +
+                         "WHERE id_utilisateur = ? " +
+                         "AND id_ville = (SELECT id FROM villes WHERE nom_ville = ?)";
+
+            PreparedStatement statement = connexion.prepareStatement(sql);
+            statement.setString(1, preferences);
+            statement.setInt(2, idUtilisateur);
+            statement.setString(3, nomVille);
+
+            statement.executeUpdate();
+            connexion.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
