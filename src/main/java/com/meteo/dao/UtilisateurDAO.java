@@ -5,6 +5,8 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
+import org.mindrot.jbcrypt.BCrypt;
+
 import com.meteo.model.Utilisateur;
 
 public class UtilisateurDAO {
@@ -18,12 +20,14 @@ public class UtilisateurDAO {
             Class.forName("com.mysql.cj.jdbc.Driver");
             Connection connexion = DriverManager.getConnection(URL, USER, PWD);
             
-            // La requête pour insérer un nouvel utilisateur
+            // Hachage du mot de passe avec BCrypt avant insertion
+            String motDePasseHache = BCrypt.hashpw(utilisateur.getMotDePasse(), BCrypt.gensalt());
+
             String sql = "INSERT INTO utilisateurs (email, mot_de_passe) VALUES (?, ?)";
             PreparedStatement statement = connexion.prepareStatement(sql);
             
             statement.setString(1, utilisateur.getEmail());
-            statement.setString(2, utilisateur.getMotDePasse());
+            statement.setString(2, motDePasseHache);
             
             statement.executeUpdate();
             connexion.close();
@@ -40,21 +44,24 @@ public class UtilisateurDAO {
             Class.forName("com.mysql.cj.jdbc.Driver");
             Connection connexion = DriverManager.getConnection(URL, USER, PWD);
             
-            // On cherche l'utilisateur qui a CET email ET CE mot de passe
-            String sql = "SELECT * FROM utilisateurs WHERE email = ? AND mot_de_passe = ?";
+            // On cherche l'utilisateur par email UNIQUEMENT
+            String sql = "SELECT * FROM utilisateurs WHERE email = ?";
             PreparedStatement statement = connexion.prepareStatement(sql);
             
             statement.setString(1, email);
-            statement.setString(2, password);
             
             ResultSet resultat = statement.executeQuery();
             
             if (resultat.next()) {
-                // Bingo ! On a trouvé. On crée l'objet Java correspondant.
-                utilisateur = new Utilisateur();
-                utilisateur.setId(resultat.getInt("id"));
-                utilisateur.setEmail(resultat.getString("email"));
-                utilisateur.setMotDePasse(resultat.getString("mot_de_passe"));
+                String motDePasseStocke = resultat.getString("mot_de_passe");
+
+                // On vérifie le mot de passe candidat avec le hash en base
+                if (BCrypt.checkpw(password, motDePasseStocke)) {
+                    utilisateur = new Utilisateur();
+                    utilisateur.setId(resultat.getInt("id"));
+                    utilisateur.setEmail(resultat.getString("email"));
+                    utilisateur.setMotDePasse(motDePasseStocke); // On garde le hash dans l'objet
+                }
             }
             
             connexion.close();
@@ -63,6 +70,6 @@ public class UtilisateurDAO {
             e.printStackTrace();
         }
         
-        return utilisateur; // Renvoie null si pas trouvé, ou l'objet User si trouvé
+        return utilisateur; // Renvoie null si pas trouvé ou mdp incorrect
     }
 }

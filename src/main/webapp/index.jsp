@@ -8,6 +8,12 @@
 <head>
     <meta charset="UTF-8">
     <title>Ma Météo - Accueil</title>
+
+    <!-- jQuery UI & jQuery -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #eef2f3; margin: 0; padding: 20px; }
         .container { max-width: 900px; margin: 0 auto; }
@@ -221,6 +227,31 @@
             panel.style.display = "block";
         }
     }
+
+    // AUTOCOMPLETION (jQuery UI)
+    $(document).ready(function() {
+        $("#search-input").autocomplete({
+            source: function(request, response) {
+                $.ajax({
+                    url: "autocomplete",
+                    dataType: "json",
+                    data: {
+                        term: request.term
+                    },
+                    success: function(data) {
+                        response(data);
+                    }
+                });
+            },
+            minLength: 2, // Se déclenche après 2 caractères
+            select: function(event, ui) {
+                // Quand on clique sur une suggestion, on remplit le champ
+                // On garde "Ville, Pays" pour l'API météo
+                // On pourrait nettoyer si besoin, mais l'API météo gère "Paris, FR"
+                $("#search-input").val(ui.item.value);
+            }
+        });
+    });
 
     // GÉOLOCALISATION AUTOMATIQUE
     <c:if test="${askForGeolocation}">
